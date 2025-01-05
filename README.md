@@ -28,7 +28,7 @@ This repository contains scripts to process paired-end Illumina sequencing data 
 - Install snakemake (instructions [here](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html))
 - Create environment to run the snakelike pipeline
 
-    ```conda env create -f envs/pdep.yml```
+    ```conda env create -f envs/env_tnseq.yml```
 - Run the pipeline with this command (which you may need to modify slightly depending on whether it is run locally or on SLURM)
 
     ```snakemake -p --snakefile SNAKEFILE --cores 4 --use-conda --conda-frontend conda```
