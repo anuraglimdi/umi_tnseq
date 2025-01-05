@@ -222,7 +222,7 @@ def extract_sample_name(sam_r1_path):
     Adjust the regex pattern if your filenames follow a different convention.
     """
     sam_r1_filename = os.path.basename(sam_r1_path)
-    match = re.match(r'^(?P<sample>.+)_R1\.sam$', sam_r1_filename)
+    match = re.match(r".*/(?P<sample_name>.+)_R1_.*$", sam_r1_filename)
     if match:
         return match.group('sample')
     else:
