@@ -12,3 +12,24 @@ In my PhD work (Changing fitness effects of mutations through long-term bacteria
 
 ## How to use `umi_tnseq` codebase
 This repository contains scripts to process paired-end Illumina sequencing data generated using the UMI-TnSeq method. If you'd like to run scripts individually, detailed usage instructions are in `scripts/README.md`. Alternatively, you can run the entire analysis pipeline using Snakemake. See instructions below:
+
+- Organize the `data` directory as follows, placing all raw fastq files in the `raw` sub-directory
+
+    ```
+    ├── data
+    │   ├── filtered
+    │   ├── raw
+    │   ├── sam
+    ```
+- Rename the fastqs to be compatible with the Snakemake workflow
+    ```
+    bash scripts/rename_fastq.sh /data/raw
+    ```
+- Install snakemake (instructions [here](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html))
+- Create environment to run the snakelike pipeline
+
+    ```conda env create -f envs/pdep.yml```
+- Run the pipeline with this command (which you may need to modify slightly depending on whether it is run locally or on SLURM)
+
+    ```snakemake -p --snakefile SNAKEFILE --cores 4 --use-conda --conda-frontend conda```
+- Final position counts matrices with raw and UMI corrected counts will be written to the `results` directory 

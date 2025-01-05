@@ -1,0 +1,14 @@
+name: workflow_env  # You can rename the environment as desired
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9  # Specify the Python version as needed
+  - snakemake  # Workflow management system
+  - bowtie2    # Alignment tool for short reads
+  - samtools   # Toolkit for SAM/BAM files (optional but recommended)
+  - numpy      # Numerical computing library
+  - pysam      # Python interface for SAM/BAM files
+  - biopython  # Biological computation tools (e.g., Bio.SeqIO)
+  - bash       # Shell interpreter for running Bash scripts
