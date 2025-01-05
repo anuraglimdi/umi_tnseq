@@ -1,4 +1,4 @@
-name: workflow_env  # You can rename the environment as desired
+name: tnseq_workflow_env  # You can rename the environment as desired
 channels:
   - bioconda
   - conda-forge
