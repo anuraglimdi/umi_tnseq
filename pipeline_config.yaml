@@ -1,0 +1,4 @@
+# path to bowtie index
+reference: "path_to_reference_genome_index"
+# number of threads
+threads: 4

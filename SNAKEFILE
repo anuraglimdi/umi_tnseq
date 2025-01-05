@@ -1,0 +1,137 @@
+# Snakefile
+
+import os
+
+# Note: this script assumes that you have cloned the repository and 
+# are running it from the base path in the repository
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+# Specify the config file (see example in repository for structure)
+# Note that path is interpreted relative to working directory
+# Not the path of the SNAKEFILE
+configfile: "pipeline_config.yaml"
+
+# Define paths to scripts
+FILTER_TRIM_SCRIPT = "scripts/filter_trim.py"
+BOWTIE_SCRIPT = "scripts/run_bowtie.sh"
+PROCESS_SAM_SCRIPT = "scripts/process_sam.py"
+
+# Define Bowtie2 reference genome index prefix
+REFERENCE_GENOME = config["reference"]  
+
+# Define number of threads for Bowtie2
+THREADS = config["threads"]
+
+# =============================================================================
+# Identify Samples
+# =============================================================================
+
+# Identify all samples based on Read1 FastQ files in the raw directory
+SAMPLES, = glob_wildcards("data/raw/{sample}_R1.fastq")
+
+# =============================================================================
+# Rules
+# =============================================================================
+
+rule all:
+    """
+    The final target of the workflow: all merged position count files.
+    """
+    input:
+        expand("results/{sample}_merged.pos", sample=SAMPLES)
+
+rule filter_trim_read1:
+    """
+    Rule: filter_trim_read1
+    Description: Filters and trims Read1 FastQ files, extracting UMIs and PF indices.
+    """
+    input:
+        read1="data/raw/{sample}_R1.fastq"
+    output:
+        filtered_fastq="data/filtered/filtered_{sample}_R1.fastq",
+        umi="data/filtered/UMI_{sample}_R1.txt",
+        indices_pf="data/filtered/PF_{sample}_R1.index"
+    params:
+        filter_trim_script=FILTER_TRIM_SCRIPT
+    shell:
+        """
+        python {params.filter_trim_script} \
+            --input {input.read1} \
+            --output_dir data/filtered \
+            # Add additional parameters if your filter_trim.py script requires them, e.g., --trim_length 50
+        """
+
+rule run_bowtie_read1:
+    """
+    Rule: run_bowtie
+    Description: Aligns filtered Read1 FastQ files to the reference genome using Bowtie2.
+    Outputs SAM files for Read1.
+    """
+    input:
+        read1_filtered="data/filtered/filtered_{sample}_R1.fastq",
+    output:
+        sam_r1="data/sam/filtered_{sample}_R1.sam",
+    params:
+        bowtie_script=BOWTIE_SCRIPT,
+        reference_genome=REFERENCE_GENOME,
+        threads=THREADS
+    shell:
+        """
+        bash {params.bowtie_script} \
+            --input {input.read1_filtered} \
+            --output_dir data/sam \
+            --reference {params.reference_genome} \
+            --threads {params.threads}
+        """
+
+rule run_bowtie_read2:
+    """
+    Rule: run_bowtie
+    Description: Aligns raw Read2 FastQ files to the reference genome using Bowtie2.
+    Outputs SAM files for Read2.
+    """
+    input:
+        read2="data/raw/{sample}_R2.fastq"
+    output:
+        sam_r2="data/sam/{sample}_R2.sam"
+    params:
+        bowtie_script=BOWTIE_SCRIPT,
+        reference_genome=REFERENCE_GENOME,
+        threads=THREADS
+    shell:
+        """
+        bash {params.bowtie_script} \
+            --input {input.read1_filtered} \
+            --input2 {input.read2} \
+            --output_dir data/sam \
+            --reference {params.reference_genome} \
+            --threads {params.threads}
+        """
+
+rule process_sam:
+    """
+    Rule: process_sam
+    Description: Processes paired SAM files to merge data, handle UMIs, discard PCR duplicates, and count reads per TA site.
+    Outputs a merged position count file.
+    """
+    input:
+        sam_r1="data/sam/filtered_{sample}_R1.sam",
+        sam_r2="data/sam/{sample}_R2.sam",
+        umi="data/filtered/UMI_{sample}_R1.txt",
+        indices_pf="data/filtered/PF_{sample}_R1.index"
+    output:
+        merged_pos="results/{sample}_merged.pos"
+    params:
+        process_sam_script=PROCESS_SAM_SCRIPT
+    shell:
+        """
+        python {params.process_sam_script} \
+            --sam_r1 {input.sam_r1} \
+            --sam_r2 {input.sam_r2} \
+            --umi_list {input.umi} \
+            --indices_pf {input.indices_pf} \
+            --output_dir results
+        """
