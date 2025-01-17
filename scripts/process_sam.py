@@ -31,30 +31,14 @@ def parse_arguments():
         description="Process paired SAM files (Read1 and Read2), integrate UMI data, \
                      discard PCR duplicates, and output read counts per TA site."
     )
+    parser.add_argument("--sam_r1", required=True, help="Path to the Read1 SAM file.")
+    parser.add_argument("--sam_r2", required=True, help="Path to the Read2 SAM file.")
+    parser.add_argument("--umi_list", required=True, help="Path to the UMI list file.")
     parser.add_argument(
-        "--sam_r1",
-        required=True,
-        help="Path to the Read1 SAM file."
+        "--indices_pf", required=True, help="Path to the PF index file."
     )
     parser.add_argument(
-        "--sam_r2",
-        required=True,
-        help="Path to the Read2 SAM file."
-    )
-    parser.add_argument(
-        "--umi_list",
-        required=True,
-        help="Path to the UMI list file."
-    )
-    parser.add_argument(
-        "--indices_pf",
-        required=True,
-        help="Path to the PF index file."
-    )
-    parser.add_argument(
-        "--output_dir",
-        required=True,
-        help="Directory to store the output file."
+        "--output_dir", required=True, help="Directory to store the output file."
     )
     return parser.parse_args()
 
@@ -67,10 +51,7 @@ def setup_logging(output_dir):
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler(sys.stdout)
-        ]
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)],
     )
     logging.info("Logging initialized.")
 
@@ -82,11 +63,11 @@ def get_positions(sam_file_path):
     """
     positions = []
     try:
-        with pysam.AlignmentFile(sam_file_path, 'r') as sam_file:
+        with pysam.AlignmentFile(sam_file_path, "r") as sam_file:
             for read in sam_file:
                 pos = read.get_reference_positions(full_length=False)
                 # Check if the read is mapped and uniquely aligned
-                if pos and not read.has_tag('XS'):
+                if pos and not read.has_tag("XS"):
                     # Determine strand
                     if read.is_forward:
                         positions.append(pos[0])
@@ -114,7 +95,7 @@ def load_umi_list(umi_file):
         logging.error(f"UMI file does not exist: {umi_file}")
         sys.exit(1)
     try:
-        with open(umi_file, 'r') as f:
+        with open(umi_file, "r") as f:
             umi_list = f.read().splitlines()
         logging.info(f"Loaded {len(umi_list)} UMIs from {umi_file}")
         return umi_list
@@ -146,7 +127,9 @@ def process_umi_positions(umi_list, positions_r2_pf):
     Returns a list of combined UMI+position strings.
     """
     if len(umi_list) != len(positions_r2_pf):
-        logging.error("Length of UMI list does not match length of Read2 positions after filtering.")
+        logging.error(
+            "Length of UMI list does not match length of Read2 positions after filtering."
+        )
         sys.exit(1)
     combined_umi = [f"{umi}{pos}" for umi, pos in zip(umi_list, positions_r2_pf)]
     logging.info("Combined UMI with Read2 positions.")
@@ -161,7 +144,9 @@ def discard_pcr_duplicates(positions_combined, combined_umi):
     # Ensure non-negative positions
     valid_indices = positions_combined != -1
     filtered_positions = positions_combined[valid_indices]
-    filtered_umi = [umi for umi, pos in zip(combined_umi, positions_combined) if pos != -1]
+    filtered_umi = [
+        umi for umi, pos in zip(combined_umi, positions_combined) if pos != -1
+    ]
 
     # Unique positions and counts
     unique, counts = np.unique(filtered_positions, return_counts=True)
@@ -208,7 +193,9 @@ def save_position_counts(matrix, output_dir, sample_name):
     output_file = os.path.join(output_dir, f"{sample_name}_merged.pos")
     try:
         header = "Position\tRaw_Count\tUMI_Corrected_Count"
-        np.savetxt(output_file, matrix.T, fmt='%d', delimiter='\t', header=header, comments='')
+        np.savetxt(
+            output_file, matrix.T, fmt="%d", delimiter="\t", header=header, comments=""
+        )
         logging.info(f"Saved position counts to {output_file}")
     except Exception as e:
         logging.error(f"Failed to save position counts to {output_file}: {e}")
@@ -224,9 +211,11 @@ def extract_sample_name(sam_r1_path):
     sam_r1_filename = os.path.basename(sam_r1_path)
     match = re.match(r".*/(?P<sample_name>.+)_R1_.*$", sam_r1_filename)
     if match:
-        return match.group('sample')
+        return match.group("sample")
     else:
-        logging.error(f"Read 1 SAM filename does not match expected pattern: {sam_r1_filename}")
+        logging.error(
+            f"Read 1 SAM filename does not match expected pattern: {sam_r1_filename}"
+        )
         sys.exit(1)
 
 
@@ -262,7 +251,9 @@ def main():
     # Doing this check because we have already filtered out invalid reads without transposon
     # for read 1 in the first step of the analysis
     if len(positions_r1) != len(positions_r2_pf):
-        logging.error("Number of reads in read 1 and read 2 data is not equal after filtering.")
+        logging.error(
+            "Number of reads in read 1 and read 2 data is not equal after filtering."
+        )
         sys.exit(1)
 
     # Create a list of UMIs where we incorporate the Read2 mapping coordinate
@@ -274,13 +265,17 @@ def main():
         sys.exit(1)
 
     # Counting how many unique data points we have, and corresponding counts
-    unique_positions, counts, counts_umi = discard_pcr_duplicates(positions_r1, combined_umi)
+    unique_positions, counts, counts_umi = discard_pcr_duplicates(
+        positions_r1, combined_umi
+    )
 
     # Construct the final matrix
     # Column 0 - list of all the unique positions
     # Column 1 - counts corresponding to those positions
     # Column 2 - UMI corrected counts corresponding to those positions
-    position_counts_matrix = count_reads_per_ta_site(unique_positions, counts, counts_umi)
+    position_counts_matrix = count_reads_per_ta_site(
+        unique_positions, counts, counts_umi
+    )
 
     # Save the position counts
     save_position_counts(position_counts_matrix, args.output_dir, sample_name)

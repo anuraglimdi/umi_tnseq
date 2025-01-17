@@ -1,0 +1,6 @@
+# ignore any data files for commits
+*.fastq
+*.sam
+*.index
+*.txt
+*.pos
